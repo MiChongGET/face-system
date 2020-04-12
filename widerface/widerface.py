@@ -1,9 +1,13 @@
-import os,cv2,sys,shutil,numpy
-
+import cv2
+import numpy
 # pycharm提示此处报错，提示不存在dom，但是运行是正常的。。。
 from xml.dom.minidom import Document
 
-import os
+# 将数据写入到xml文件中
+# filename 重命名的图片名称
+# saveimg 对应的图片data
+# bboxes 相应图片上面的人脸数据
+# xmlpath xml文件存放的位置，包括xml文件名称（存放在Annotations中）
 def writexml(filename, saveimg, bboxes, xmlpath):
     doc = Document()
 
@@ -100,6 +104,7 @@ rootdir = "D:\\Python\\dataset\\widerface"
 # TXT文件中包含图片路径，每张图片中几个人脸，以及人脸所在的位置
 gtfile = "D:\\Python\\dataset\\widerface\\data\\wider_face_split\\wider_face_val_bbx_gt.txt"
 
+# 图片数据集存放地址
 im_folder = "D:\\Python\\dataset\\widerface\\WIDER_val\\images"
 
 ##这里可以是test也可以是val
@@ -156,15 +161,15 @@ with open(gtfile, "r") as gt:
 
         cv2.imshow("1", im_data)
         cv2.waitKey(0)
-        #
-        # filename = gt_con.replace("/", "_")
-        # # 写入文件名
-        # fwrite.write(filename.split(".")[0] + "\n")
-        #
-        # # 写入文件
-        # cv2.imwrite("{}/JPEGImages/{}".format(rootdir, filename), im_data)
-        #
-        # xmlpath = "{}/Annotations/{}.xml".format(rootdir, filename.split(".")[0])
-        # writexml(filename, im_data, bboxes, xmlpath)
+
+        filename = gt_con.replace("/", "_")
+        # 写入文件名
+        fwrite.write(filename.split(".")[0] + "\n")
+
+        # 写入文件
+        cv2.imwrite("{}/JPEGImages/{}".format(rootdir, filename), im_data)
+
+        xmlpath = "{}/Annotations/{}.xml".format(rootdir, filename.split(".")[0])
+        writexml(filename, im_data, bboxes, xmlpath)
 
 fwrite.close()
