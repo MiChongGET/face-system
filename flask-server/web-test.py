@@ -2,11 +2,12 @@ import base64
 
 import cv2
 import numpy as np
-from flask import Flask, request
+from flask import Flask, request, make_response, jsonify
 
 app = Flask(__name__)
 
 
+# 笔记本摄像头拍照测试
 @app.route("/pic", methods=['POST'])
 def getPhoto():
     # 获取前端的base64图像字符串（摄像头拍摄的图片）
@@ -29,6 +30,12 @@ def getPhoto():
     # cv2.waitKey(0)
 
     return 'h'
+
+
+@app.route("/json")
+def getjson():
+    response = make_response(jsonify({'test': 'good', "code": 403}))
+    return jsonify({'test': 'good', "code": 403})
 
 
 if __name__ == '__main__':

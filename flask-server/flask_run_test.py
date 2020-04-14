@@ -64,15 +64,9 @@ def helloworld():
 
 
 # 图片上传
-@app.route('/upload', methods=['POST', 'GET'])
+@app.route("/upload")
 def upload():
-    f = request.files.get('file')
-    print(f)
-    upload_path = os.path.join("tmp/tmp." + f.filename.split(".")[-1])
-    # secure_filename(f.filename))  #注意：没有的文件夹一定要先创建，不然会提示没有该路径
-    print(upload_path)
-    f.save(upload_path)
-    return upload_path
+    return "upload success!"
 
 
 @app.route("/face_detect", methods=['POST'])
@@ -92,11 +86,10 @@ def inference():
     im_data = cv2.imdecode(ima_data_cv, cv2.IMREAD_COLOR)
 
     cv2.imwrite("take.png", im_data)
-
     # im_url = request.args.get("url")
-    # # 读取图片数据
-    # im_data = cv2.imread(im_url)
-    # # 重新定义图片大小
+    # 读取图片数据
+    # im_data = cv2.imread(ima_data_cv)
+    # 重新定义图片大小
     # im_data = cv2.resize(im_data, IMAGE_SIZE)
     # 将图像矩阵转化为思维，参数加在第一维上面
     output_dict = detection_sess.run(tensor_dict, feed_dict={image_tensor: np.expand_dims(im_data, 0)})
@@ -128,7 +121,7 @@ def inference():
             print(output_dict['detection_scores'][i], x1, y1, x2, y2)
 
     # 当没有检测到人脸的时候
-    if x1 == 0 and x2 == 0 and y1 == 0 and y2 == 0:
+    if (x1 == 0 & x2 == 0 & y1 == 0 & y2 == 0):
         return make_response(jsonify({"data": [x1, y1, x2, y2], "code": 201}))
 
     respose = make_response(jsonify({"data": [x1, y1, x2, y2], "code": 200}))
