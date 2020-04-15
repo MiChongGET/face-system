@@ -96,8 +96,8 @@ def inference():
     # im_url = request.args.get("url")
     # # 读取图片数据
     # im_data = cv2.imread(im_url)
-    # # 重新定义图片大小
-    # im_data = cv2.resize(im_data, IMAGE_SIZE)
+    # # 重新定义图片大小,将图片转化为256*256大小
+    im_data = cv2.resize(im_data, IMAGE_SIZE)
     # 将图像矩阵转化为思维，参数加在第一维上面
     output_dict = detection_sess.run(tensor_dict, feed_dict={image_tensor: np.expand_dims(im_data, 0)})
 

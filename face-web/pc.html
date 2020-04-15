@@ -21,7 +21,7 @@
                     <video height="240px" autoplay="autoplay" style="border: red solid 1px" title="摄像头区域"
                            id="video"></video>
                     <div id="img">
-                        <canvas id="face-detect" hidden="hidden" height="240px" width="320px" ></canvas>
+                        <canvas id="face-detect" hidden="hidden" height="240px" width="320px"></canvas>
                     </div>
                     <div>
 
@@ -199,10 +199,11 @@
                     // img.height = 256
                     // img.width = 256
 
-                    img.onload = function(){
+                    img.onload = function () {
                         tt.strokeStyle = "#f00";
-                        tt.drawImage(img, 0,0);
-                        tt.strokeRect(res.data[0], res.data[1], res.data[2], res.data[3]);
+                        tt.lineWidth = 5
+                        tt.drawImage(img, 0, 0);
+                        tt.strokeRect(res.data[0], res.data[1], res.data[2] * 0.7, res.data[3] * 0.7);
                     }
 
                     // 显示canvas绘制后的图片
@@ -227,12 +228,12 @@
 
     //跳到主界面
     function goHome() {
-        window.location.href="index.html";
+        window.location.href = "index.html";
     }
 
     //跳转到检测页面
     function goBack() {
-        window.location.href="pc.html";
+        window.location.href = "pc.html";
     }
 
 </script>
