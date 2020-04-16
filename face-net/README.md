@@ -20,6 +20,17 @@
             https://blog.csdn.net/MrCharles/article/details/80360461
 
 ### 二、人脸匹配数据准备
+#### 运行环境
+- tensorflow==1.7
+- scipy
+- scikit-learn
+- opencv-python
+- h5py
+- matplotlib
+- Pillow
+- requests
+- psutil
+
 #### 数据集
 - LFW  下载地址：http://vis-www.cs.umass.edu/lfw/#views  谷歌网盘（需要梯子）：https://drive.google.com/drive/u/0/folders/0B7EVK8r0v71pQ3NzdzRhVUhSams
 - Celeba 下载地址：http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html
