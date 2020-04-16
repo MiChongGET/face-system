@@ -148,6 +148,8 @@ D:\\Python\\Work\\face-system\\face-net\\facenet-master\\data\\models\\20180408-
 D:\\Python\\Work\\face-system\\face-net\\facenet-master\\data\\ifw\\ifw_160\\Aaron_Eckhart\\Aaron_Eckhart_0001.png
 D:\\Python\\Work\\face-system\\face-net\\facenet-master\\data\\ifw\\ifw_160\\Aaron_Guiel\\Aaron_Guiel_0001.png
 ```
+- pycharm中运行记得修改成下面这样:
+![](https://ae01.alicdn.com/kf/Ha03a9c0a688b4b7fa4352fe0ab5f59270.png)
 
 - 运行结果如下：
 
