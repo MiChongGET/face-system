@@ -71,7 +71,7 @@
 
 #### 2、重新裁剪LFM图片数据集的大小
 
-> 程序中神经网络使用的是谷歌的“inception resnet v1”网络模型，这个模型的输入时160*160的图像，而我们下载的LFW数据集是250*250限像素的图像，所以需要进行图片的预处理。
+> 程序中神经网络使用的是谷歌的“inception resnet v1”网络模型，这个模型的输入时160x160的图像，而我们下载的LFW数据集是250x250限像素的图像，所以需要进行图片的预处理。
 
 - 原本数据集放在raw文件夹下面，新裁剪的图片放在ifw_160文件夹下面
 
@@ -118,7 +118,7 @@ data/pairs.txt：D:\\Python\\Work\\face-system\\face-net\\facenet-master\\data\\
 Python src\validate_on_lfw.py data\lfw\lfw_160 src\models\20180408-102900 --lfw_pairs=data/pairs.txt
 ```
 
-##### 3、TensorFlow版本导致报错
+##### 3)、TensorFlow版本导致报错
 
 ```shell
 2020-04-17 00:27:11.307949: W tensorflow/core/graph/graph_constructor.cc:1272] Importing a graph with a lower producer version 24 into an existing graph with producer version 27. Shape inference will have run different parts of the graph with different producer versions.
@@ -136,4 +136,20 @@ Traceback (most recent call last):
 - 运行结果，可以看出，模型的精度高达99.7%
 
   <img src="https://ae01.alicdn.com/kf/Hbe49c52d5942488fbed1296a0514254cW.png" style="zoom: 80%;" />
+
+#### 4、人脸对比程序运行
+
+> FaceNet可以对比两张人脸图片，可以得出他们的经过网络映射之后的欧式距离，相同的人脸的距离越小。
+
+```shell
+# 参数：第一个参数为预模型的地址，第二个和第三个参数为图片的地址
+python src\compare.py 
+D:\\Python\\Work\\face-system\\face-net\\facenet-master\\data\\models\\20180408-102900
+D:\\Python\\Work\\face-system\\face-net\\facenet-master\\data\\ifw\\ifw_160\\Aaron_Eckhart\\Aaron_Eckhart_0001.png
+D:\\Python\\Work\\face-system\\face-net\\facenet-master\\data\\ifw\\ifw_160\\Aaron_Guiel\\Aaron_Guiel_0001.png
+```
+
+- 运行结果如下：
+
+![](https://ae01.alicdn.com/kf/H1ee064785b9a455b88ec83ccd54999d06.png)
 
