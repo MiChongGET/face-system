@@ -4,6 +4,7 @@ import os
 import numpy as np
 import base64
 from flask_cors import *
+import json
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -57,6 +58,20 @@ with detection_sess.as_default():
                 detection_masks_reframed, 0)
         image_tensor = tf.get_default_graph().get_tensor_by_name('image_tensor:0')
 
+#############################
+# 人脸特征 face feature
+face_feature_sess = tf.Session()
+ff_pb_path = "face_recognition_model.pb"
+with face_feature_sess.as_default():
+    ff_od_graph_def = tf.GraphDef()
+    with tf.gfile.GFile(ff_pb_path, 'rb') as fid:
+        serialized_graph = fid.read()
+        ff_od_graph_def.ParseFromString(serialized_graph)
+        tf.import_graph_def(ff_od_graph_def, name='')
+        ff_images_placeholder = tf.get_default_graph().get_tensor_by_name("input:0")
+        ff_train_placeholder = tf.get_default_graph().get_tensor_by_name("phase_train:0")
+        ff_embeddings = tf.get_default_graph().get_tensor_by_name("embeddings:0")
+
 
 @app.route("/")
 def helloworld():
@@ -75,6 +90,7 @@ def upload():
     return upload_path
 
 
+# 人脸检测接口
 @app.route("/face_detect", methods=['POST'])
 def inference():
     # 获取前端的base64图像字符串（摄像头拍摄的图片）
@@ -133,6 +149,60 @@ def inference():
 
     respose = make_response(jsonify({"data": [x1, y1, x2, y2], "code": 200}))
     return respose
+
+
+# 图像数据的标准化，图片预处理过程
+def prewhiten(x):
+    mean = np.mean(x)
+    std = np.std(x)
+    std_adj = np.maximum(std, 1.0 / np.sqrt(x.size))
+    y = np.multiply(np.subtract(x, mean), 1 / std_adj)
+    return y
+
+
+# 读取图片
+def read_image(path):
+    ###
+    im_data = cv2.imread(path)
+    im_data = prewhiten(im_data)
+    im_data = cv2.resize(im_data, (160, 160))
+    # 1 * h * w * 3
+    return im_data
+
+
+# 得到人脸的128个特征值
+@app.route("/face_recognition")
+def face_recognition():
+    im_data1 = read_image("tmp\\lei.jpg")
+    im_data1 = np.expand_dims(im_data1, axis=0)
+    emb1 = face_feature_sess.run(ff_embeddings,
+                                 feed_dict={ff_images_placeholder: im_data1, ff_train_placeholder: False})
+    print(emb1)
+    response = make_response(jsonify(str(emb1[0])))
+
+    return response
+
+
+# 计算欧式距离
+@app.route("/face_dis")
+def face_dis():
+    im_data1 = read_image("/home/kuan/code/mooc_py3_tensorflow/flask_server_facedetection/tmp/crop_face.jpg")
+
+    im_data1 = np.expand_dims(im_data1, axis=0)
+
+    emb1 = face_feature_sess.run(ff_embeddings,
+                                 feed_dict={ff_images_placeholder: im_data1, ff_train_placeholder: False})
+
+    im_data1 = read_image("tmp/face.jpg")
+
+    im_data1 = np.expand_dims(im_data1, axis=0)
+
+    emb2 = face_feature_sess.run(ff_embeddings,
+                                 feed_dict={ff_images_placeholder: im_data1, ff_train_placeholder: False})
+
+    dist = np.linalg.norm(emb1 - emb2)
+
+    return str(dist)
 
 
 if __name__ == '__main__':
