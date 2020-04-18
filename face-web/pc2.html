@@ -18,14 +18,21 @@
             <legend>摄像头区域</legend>
             <ul style="margin: 20px">
                 <li style="padding: 20px">
-                    <video height="240px" autoplay="autoplay" style="border: red solid 1px" title="摄像头区域"
-                           id="video"></video>
+                    <video height="480px" autoplay="autoplay"  width="640px" style="border: red solid 1px" title="摄像头区域"
+                           id="video">
+
+
+                    </video>
+                    <!--<canvas height="240px" autoplay="autoplay" id="myCanvas"></canvas>-->
                     <div id="img">
-                        <canvas id="face-detect" hidden="hidden" height="240px" width="320px"></canvas>
+                        <canvas id="face-detect" hidden="hidden" height="480px" width="640px"></canvas>
                     </div>
                     <div>
 
                     </div>
+                </li>
+                <li style="padding-top: 30px">
+                    <canvas id="canvas1" height="480px" width="640px" hidden="hidden"></canvas>
                 </li>
 
                 <li>
@@ -35,13 +42,12 @@
                     </button>
                     <button class="layui-btn layui-btn-lg layui-btn-normal" onclick="getPhoto()"
                             style="width: 150px;display: none"
-                            id="getPhoto">拍照
+                            id="getPhoto">人脸检测
                     </button>
                     <button class="layui-btn layui-btn-lg layui-btn-normal" onclick="validateUser()"
                             style="width: 150px;display: none" id="validateUser">
                         开始验证
                     </button>
-                    <!--<input type="file" name="file" id="upload_header" />-->
                     <button class="layui-btn layui-btn-lg layui-btn-normal" onclick="goHome()"
                             style="width: 150px;display: none" id="goHome">
                         返回到主页面
@@ -50,11 +56,9 @@
                             style="width: 150px;display: none" id="goBack">
                         重新检测
                     </button>
+
                 </li>
 
-                <li>
-                    <canvas id="canvas1" height="240px" width="320px" hidden="hidden"></canvas>
-                </li>
 
             </ul>
 
@@ -74,6 +78,13 @@
     var canvas1 = document.getElementById('canvas1');
     var context1 = canvas1.getContext('2d');
 
+    // var c = document.getElementById("myCanvas");
+    // var cxt = c.getContext("2d");
+    // cxt.fillStyle = "#FF0000";
+    // cxt.beginPath();
+    // cxt.arc(70, 18, 15, 0, Math.PI * 2, true);
+    // cxt.closePath();
+    // cxt.fill();
 
     navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
     window.URL = window.URL || window.webkitURL || window.mozURL || window.msURL;
@@ -90,6 +101,7 @@
     });
 
     function getMedia() {
+        $("#startVideo").hide();
         if (navigator.getUserMedia) {
             navigator.getUserMedia({
                 'video': {
@@ -161,68 +173,86 @@
 
     }
 
+    //将照片以base64的方式传入到后台
+    var x1 = 0
+    var y1 = 0
+    var x2 = 0
+    var y2 = 0
+    var i = 0
+
     //拍照
     function getPhoto() {
-        context1.drawImage(video, 0, 0, 320, 240); //将video对象内指定的区域捕捉绘制到画布上指定的区域，实现拍照。
-        showImg();
-        console.log($('#upload_header'))
+        // context1.drawImage(video, 0, 0, 320, 240); //将video对象内指定的区域捕捉绘制到画布上指定的区域，实现拍照。
+        // showImg();
+        // console.log($('#upload_header'))
+        //隐藏拍照按钮
+        $('#getPhoto').hide();
+        $('#video').hide();
+        $('#goBack').show();
+        $('#goHome').show();
+
+
+        $("#canvas1").show();
+        var timer = setInterval(function () {
+            context1.drawImage(video, 0, 0, 640, 480);//绘制视频
+            // showImg();
+            context1.beginPath();
+            validateUser(context1);
+            context1.closePath();
+            context1.fill();
+        }, 800);
 
     }
 
-    //将照片以base64的方式传入到后台
-    function validateUser() {
+
+    function validateUser(tt) {
 
         console.log('上传头像');
         layer.load();
-        $.ajax({
+        var img = convertCanvasToImage(tt);
+        get_face_res = $.ajax({
 
             url: 'http://127.0.0.1:9001/face_detect_by_dlib',
             type: "post",
-            data: {'base64Data': $('#header').attr('src')},
+            data: {'base64Data': img.src},
             dataType: "json",
             success: function (res) {
                 console.log("result:" + res.data)
                 layer.closeAll('loading');
                 if (res.code == 200) {
-                    layer.msg("识别成功");
+                    // layer.msg("识别成功");
                     $('#validateUser').hide();
                     $('#startVideo').hide();
-                    $('#goBack').show();
-                    $('#goHome').show();
 
-
-                    // 绘制人脸区域矩形框
-                    var c = document.getElementById("face-detect");
-                    var tt = c.getContext("2d");//
-                    var img = new Image();
-                    img.src = $('#header').attr('src');
-                    // img.height = 256
-                    // img.width = 256
-
-                    img.onload = function () {
-                        tt.strokeStyle = "#f00";
-                        tt.lineWidth = 2
-                        tt.drawImage(img, 0, 0);
-                        //strokeRect( x, y, width, height )  绘制矩形（无填充）
-                        tt.strokeRect(res.data[0], res.data[1], res.data[2]-res.data[0], res.data[3]-res.data[1]);
+                    if (i > 0) {
+                        tt.clearRect(x1, y1, x2, y2);
                     }
 
-                    // 显示canvas绘制后的图片
-                    $('#header').hide();
-                    $('#face-detect').show();
+                    i++;
+                    x1 = res.data[0];
+                    y1 = res.data[1];
+                    x2 = res.data[2] - res.data[0];
+                    y2 = res.data[3] - res.data[1];
 
                 } else {
                     layer.msg("识别失败，请重新检测")
                     $('#validateUser').hide();
                     $('#startVideo').hide();
-                    $('#goHome').show();
-                    $('#goBack').show();
                 }
             },
             error: function () {
                 layer.msg("上传失败");
             }
 
+        });
+
+        // 此处执行人脸矩形框绘制过程
+        $.when(get_face_res).done(function () {
+            //要执行的操作
+            tt.strokeStyle = "#f00";
+            tt.lineWidth = 2
+            tt.drawImage(img, 0, 0);
+            tt.strokeRect(x1, y1, x2, y2);
         });
 
     }
@@ -234,7 +264,7 @@
 
     //跳转到检测页面
     function goBack() {
-        window.location.href = "pc.html";
+        window.location.href = "pc2.html";
     }
 
 </script>

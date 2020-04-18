@@ -4,7 +4,7 @@ import os
 import numpy as np
 import base64
 from flask_cors import *
-import json
+import dlib
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -151,6 +151,42 @@ def inference():
     return respose
 
 
+# 使用dlib来检测人脸
+@app.route("/face_detect_by_dlib", methods=['POST'])
+def face_detect_by_dlib():
+    # 获取前端的base64图像字符串（摄像头拍摄的图片）
+    img_str = str(request.form['base64Data'])
+
+    # 获取到base64数据
+    data = img_str.split("base64,")
+    img_data = data[1]
+
+    # 转换base64数据
+    img = base64.b64decode(img_data)
+
+    # 转化为cv需要的格式
+    ima_data_cv = np.fromstring(img, np.uint8)
+    im_data = cv2.imdecode(ima_data_cv, cv2.IMREAD_COLOR)
+    # 将摄像机拍摄的图片写入到本地
+    cv2.imwrite('tmp/face.png', im_data)
+
+    detector = dlib.get_frontal_face_detector()
+    # 由dlib检测出来的人脸
+    dets = detector(im_data)
+
+    # 判断没有人脸的时候
+    if len(dets) == 0:
+        return make_response(jsonify({"data": None, "code": 201}))
+
+    d = dets[0]
+    x1 = d.left()
+    y1 = d.top()
+    x2 = d.right()
+    y2 = d.bottom()
+    print('Left %d Top %d Right %d Bottom %d' % (d.left(), d.top(), d.right(), d.bottom()))
+    return make_response(jsonify({"data": [x1, y1, x2, y2], "code": 200}))
+
+
 # 图像数据的标准化，图片预处理过程
 def prewhiten(x):
     mean = np.mean(x)
@@ -186,14 +222,14 @@ def face_recognition():
 # 计算欧式距离
 @app.route("/face_dis")
 def face_dis():
-    im_data1 = read_image("/home/kuan/code/mooc_py3_tensorflow/flask_server_facedetection/tmp/crop_face.jpg")
+    im_data1 = read_image("tmp\\lei.jpg")
 
     im_data1 = np.expand_dims(im_data1, axis=0)
 
     emb1 = face_feature_sess.run(ff_embeddings,
                                  feed_dict={ff_images_placeholder: im_data1, ff_train_placeholder: False})
 
-    im_data1 = read_image("tmp/face.jpg")
+    im_data1 = read_image("tmp\\face.jpg")
 
     im_data1 = np.expand_dims(im_data1, axis=0)
 
