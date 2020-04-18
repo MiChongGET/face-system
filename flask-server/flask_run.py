@@ -5,6 +5,7 @@ import numpy as np
 import base64
 from flask_cors import *
 import dlib
+import glob
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -108,7 +109,7 @@ def inference():
     im_data = cv2.imdecode(ima_data_cv, cv2.IMREAD_COLOR)
 
     cv2.imwrite("take.png", im_data)
-
+    sp = im_data.shape
     # im_url = request.args.get("url")
     # # 读取图片数据
     # im_data = cv2.imread(im_url)
@@ -137,10 +138,16 @@ def inference():
         if output_dict['detection_scores'][i] > 0.1:
             bbox = output_dict['detection_boxes'][i]
             cate = output_dict['detection_classes'][i]
-            y1 = IMAGE_SIZE[0] * bbox[0]
-            x1 = IMAGE_SIZE[1] * bbox[1]
-            y2 = IMAGE_SIZE[0] * (bbox[2])
-            x2 = IMAGE_SIZE[1] * (bbox[3])
+            # 将坐标点还原到本来的大小
+            # y1 = IMAGE_SIZE[0] * bbox[0]
+            # x1 = IMAGE_SIZE[1] * bbox[1]
+            # y2 = IMAGE_SIZE[0] * (bbox[2])
+            # x2 = IMAGE_SIZE[1] * (bbox[3])
+            # sp是原图片的大小
+            y1 = int(bbox[0] * sp[0])
+            x1 = int(bbox[1] * sp[1])
+            y2 = int(bbox[2] * sp[0])
+            x2 = int(bbox[3] * sp[1])
             print(output_dict['detection_scores'][i], x1, y1, x2, y2)
 
     # 当没有检测到人脸的时候
@@ -219,17 +226,193 @@ def face_recognition():
     return response
 
 
+@app.route('/face_register', methods=['POST'])
+def face_register():
+    # 获取用户姓名
+    user_name = str(request.form['name'])
+    print("用户姓名：" + user_name)
+
+    ## 获取摄像头捕获的头像
+    # 获取前端的base64图像字符串（摄像头拍摄的图片）
+    img_str = str(request.form['base64Data'])
+
+    # 获取到base64数据
+    data = img_str.split("base64,")
+    img_data = data[1]
+
+    # 转换base64数据
+    img = base64.b64decode(img_data)
+
+    # 转化为cv需要的格式
+    ima_data_cv = np.fromstring(img, np.uint8)
+    im_data = cv2.imdecode(ima_data_cv, cv2.IMREAD_COLOR)
+    # 将摄像机拍摄的图片写入到本地
+    img_path = "face/img/" + user_name + ".png"
+    cv2.imwrite(img_path, im_data)
+
+    sp = im_data.shape
+    im_data = cv2.resize(im_data, IMAGE_SIZE)
+    output_dict = detection_sess.run(tensor_dict,
+                                     feed_dict={image_tensor:
+                                         np.expand_dims(
+                                             im_data, 0)})
+
+    # all outputs are float32 numpy arrays, so convert types as appropriate
+    output_dict['num_detections'] = int(output_dict['num_detections'][0])
+    output_dict['detection_classes'] = output_dict[
+        'detection_classes'][0].astype(np.uint8)
+    output_dict['detection_boxes'] = output_dict['detection_boxes'][0]
+    output_dict['detection_scores'] = output_dict['detection_scores'][0]
+
+    x1 = 0
+    y1 = 0
+    x2 = 0
+    y2 = 0
+
+    # 获取人脸框，然后提取人脸
+    for i in range(len(output_dict['detection_scores'])):
+        if output_dict['detection_scores'][i] > 0.1:
+            bbox = output_dict['detection_boxes'][i]
+            y1 = bbox[0]
+            x1 = bbox[1]
+            y2 = (bbox[2])
+            x2 = (bbox[3])
+            print(output_dict['detection_scores'][i], x1, y1, x2, y2)
+            ## 提取人脸区域
+            y1 = int(y1 * sp[0])
+            x1 = int(x1 * sp[1])
+            y2 = int(y2 * sp[0])
+            x2 = int(x2 * sp[1])
+            face_data = im_data[y1:y2, x1:x2]
+            im_data = prewhiten(face_data)  # 预处理
+            im_data = cv2.resize(im_data, (160, 160))
+            im_data1 = np.expand_dims(im_data, axis=0)
+            ## 人脸特征提取
+            emb1 = face_feature_sess.run(ff_embeddings,
+                                         feed_dict={ff_images_placeholder: im_data1, ff_train_placeholder: False})
+
+            strr = ",".join(str(i) for i in emb1[0])
+            ## 将人脸特征写入到本地文件中
+            feature_path = "face/feature/" + user_name + ".txt"
+            with open(feature_path, "w") as f:
+                f.writelines(strr)
+            f.close()
+            mess = make_response(jsonify({"data": [x1, y1, x2, y2], "code": 200, "type": True}))
+            break
+        else:
+            mess = make_response(jsonify({"data": None, "code": 200, "type": False}))
+
+    return mess
+
+
+@app.route('/face_login', methods=['POST', 'GET'])
+def face_login():
+    # 图片上传
+    # 人脸检测
+    # 人脸特征提取
+    # 加载注册人脸（人脸签到，人脸数很多，加载注册人脸放在face_login,
+    # 启动服务加载/采用搜索引擎/ES）
+    # 同注册人脸相似性度量
+    # 返回度量结果
+    # 获取用户姓名
+
+    ## 获取摄像头捕获的头像
+    # 获取前端的base64图像字符串（摄像头拍摄的图片）
+    img_str = str(request.form['base64Data'])
+
+    # 获取到base64数据
+    data = img_str.split("base64,")
+    img_data = data[1]
+
+    # 转换base64数据
+    img = base64.b64decode(img_data)
+
+    # 转化为cv需要的格式
+    ima_data_cv = np.fromstring(img, np.uint8)
+    im_data = cv2.imdecode(ima_data_cv, cv2.IMREAD_COLOR)
+
+    sp = im_data.shape
+    im_data = cv2.resize(im_data, IMAGE_SIZE)
+    output_dict = detection_sess.run(tensor_dict,
+                                     feed_dict={image_tensor:
+                                         np.expand_dims(
+                                             im_data, 0)})
+
+    # all outputs are float32 numpy arrays, so convert types as appropriate
+    output_dict['num_detections'] = int(output_dict['num_detections'][0])
+    output_dict['detection_classes'] = output_dict[
+        'detection_classes'][0].astype(np.uint8)
+    output_dict['detection_boxes'] = output_dict['detection_boxes'][0]
+    output_dict['detection_scores'] = output_dict['detection_scores'][0]
+
+    x1 = 0
+    y1 = 0
+    x2 = 0
+    y2 = 0
+
+    # 获取人脸框，然后提取人脸
+    for i in range(len(output_dict['detection_scores'])):
+        if output_dict['detection_scores'][i] > 0.1:
+            bbox = output_dict['detection_boxes'][i]
+            y1 = bbox[0]
+            x1 = bbox[1]
+            y2 = (bbox[2])
+            x2 = (bbox[3])
+            print(output_dict['detection_scores'][i], x1, y1, x2, y2)
+            ## 提取人脸区域
+            y1 = int(y1 * sp[0])
+            x1 = int(x1 * sp[1])
+            y2 = int(y2 * sp[0])
+            x2 = int(x2 * sp[1])
+            face_data = im_data[y1:y2, x1:x2]
+            im_data = prewhiten(face_data)  # 预处理
+            im_data = cv2.resize(im_data, (160, 160))
+            im_data1 = np.expand_dims(im_data, axis=0)
+            ## 人脸特征提取
+            emb1 = face_feature_sess.run(ff_embeddings,
+                                         feed_dict={ff_images_placeholder: im_data1, ff_train_placeholder: False})
+
+            # 取出服务端存储的所有人脸特征值，然后挨个比较，求出相应的欧式距离
+            features_path = glob.glob("face\\feature" + "/*")
+
+            # 记录用户名称
+            user_name = ''
+            for features_list in features_path:
+                with open(features_list) as f:
+                    # 获得各个文件中记录的特征值
+                    fea_str = f.readlines()
+                    # 获取文件名称
+                    file_name = f.name.split("face\\feature\\")[1]
+                    # 再次分割，得到用户名称
+                    user_name = file_name.split(".txt")[0]
+
+                    f.close()
+                    # 计算欧式距离
+                    emb2_str = fea_str[0].split(",")
+                    emb2 = []
+                    for ss in emb2_str:
+                        emb2.append(float(ss))
+                    emb2 = np.array(emb2)
+                    dist = np.linalg.norm(emb1 - emb2)
+                    print("dist---->", dist)
+                    if dist < 0.5:
+                        print("用户：" + user_name + "登录！")
+                        return make_response(jsonify({"data": user_name, "code": 200, "type": True}))
+
+    return make_response(jsonify({"data": None, "code": 200, "type": False}))
+
+
 # 计算欧式距离
 @app.route("/face_dis")
 def face_dis():
-    im_data1 = read_image("tmp\\lei.jpg")
+    im_data1 = read_image("tmp\\face2.png")
 
     im_data1 = np.expand_dims(im_data1, axis=0)
 
     emb1 = face_feature_sess.run(ff_embeddings,
                                  feed_dict={ff_images_placeholder: im_data1, ff_train_placeholder: False})
 
-    im_data1 = read_image("tmp\\face.jpg")
+    im_data1 = read_image("tmp\\face.png")
 
     im_data1 = np.expand_dims(im_data1, axis=0)
 

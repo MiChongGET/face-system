@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8"/>
-    <title>人脸检测</title>
+    <title>人脸注册</title>
     <link href="layui/css/layui.css" rel="stylesheet"/>
 </head>
 <body>
@@ -17,6 +17,14 @@
         <fieldset class="layui-elem-field site-demo-button" style="margin-top: 30px;width: 400px;">
             <legend>摄像头区域</legend>
             <ul style="margin: 20px">
+
+                <li style="padding: 20px;width: 300px">
+                    <label class="layui-form-label">姓名</label>
+                    <div class="layui-input-block">
+                        <input type="text" name="title" required lay-verify="required" placeholder="请输入注册用户姓名"
+                               autocomplete="off" class="layui-input" id="name">
+                    </div>
+                </li>
                 <li style="padding: 20px">
                     <video height="240px" autoplay="autoplay" style="border: red solid 1px" title="摄像头区域"
                            id="video"></video>
@@ -35,20 +43,20 @@
                     </button>
                     <button class="layui-btn layui-btn-lg layui-btn-normal" onclick="getPhoto()"
                             style="width: 150px;display: none"
-                            id="getPhoto">拍照
+                            id="getPhoto">采集人脸
                     </button>
                     <button class="layui-btn layui-btn-lg layui-btn-normal" onclick="validateUser()"
                             style="width: 150px;display: none" id="validateUser">
                         开始验证
                     </button>
                     <!--<input type="file" name="file" id="upload_header" />-->
-                    <button class="layui-btn layui-btn-lg layui-btn-normal" onclick="goHome()"
-                            style="width: 150px;display: none" id="goHome">
-                        返回到主页面
+                    <button class="layui-btn layui-btn-lg layui-btn-normal" onclick="goLogin()"
+                            style="width: 150px;display: none" id="goLogin">
+                        登录
                     </button>
                     <button class="layui-btn layui-btn-lg layui-btn-normal" onclick="goBack()"
                             style="width: 150px;display: none" id="goBack">
-                        重新检测
+                        重新注册
                     </button>
                 </li>
 
@@ -120,7 +128,6 @@
         }
 
         $('#getPhoto').show();
-
     }
 
 
@@ -173,21 +180,30 @@
     function validateUser() {
 
         console.log('上传头像');
+        console.log($("#name").val());
+        var name = $("#name").val();
+
+        // 判断姓名是否输入，为空就跳出，不执行下面操作
+        if (name == null || name === "") {
+            console.log('姓名不能为空');
+            layer.alert('姓名不能为空,请输入姓名')
+            return
+        }
         layer.load();
         $.ajax({
 
-            url: 'http://127.0.0.1:9001/face_detect',
+            url: 'http://127.0.0.1:9001/face_register',
             type: "post",
-            data: {'base64Data': $('#header').attr('src')},
+            data: {'base64Data': $('#header').attr('src'), 'name': name},
             dataType: "json",
             success: function (res) {
                 console.log("result:" + res.data)
                 layer.closeAll('loading');
-                if (res.code == 200) {
-                    layer.msg("识别成功");
+                if (res.type) {
+                    layer.msg("注册成功");
                     $('#validateUser').hide();
                     $('#startVideo').hide();
-                    $('#goBack').show();
+                    $('#goLogin').show();
                     $('#goHome').show();
 
 
@@ -196,15 +212,13 @@
                     var tt = c.getContext("2d");//
                     var img = new Image();
                     img.src = $('#header').attr('src');
-                    // img.height = 256
-                    // img.width = 256
 
                     img.onload = function () {
                         tt.strokeStyle = "#f00";
                         tt.lineWidth = 2
                         tt.drawImage(img, 0, 0);
                         //strokeRect( x, y, width, height )  绘制矩形（无填充）
-                        tt.strokeRect(res.data[0], res.data[1], res.data[2]-res.data[0], res.data[3]-res.data[1]);
+                        tt.strokeRect(res.data[0], res.data[1], res.data[2] - res.data[0], res.data[3] - res.data[1]);
                     }
 
                     // 显示canvas绘制后的图片
@@ -212,29 +226,27 @@
                     $('#face-detect').show();
 
                 } else {
-                    layer.msg("识别失败，请重新检测")
+                    layer.msg("注册失败，请重新注册")
                     $('#validateUser').hide();
                     $('#startVideo').hide();
-                    $('#goHome').show();
+                    $('#goLogin').show();
                     $('#goBack').show();
                 }
             },
             error: function () {
                 layer.msg("上传失败");
             }
-
         });
-
     }
 
-    //跳到主界面
-    function goHome() {
-        window.location.href = "index.html";
+    //跳到登录界面
+    function goLogin() {
+        window.location.href = "face_login.html";
     }
 
     //跳转到检测页面
     function goBack() {
-        window.location.href = "pc.html";
+        window.location.href = "face_regist.html";
     }
 
 </script>

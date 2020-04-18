@@ -18,7 +18,7 @@
             <legend>摄像头区域</legend>
             <ul style="margin: 20px">
                 <li style="padding: 20px">
-                    <video height="480px" autoplay="autoplay"  width="640px" style="border: red solid 1px" title="摄像头区域"
+                    <video height="480px" autoplay="autoplay" width="640px" style="border: red solid 1px" title="摄像头区域"
                            id="video">
 
 
@@ -148,37 +148,12 @@
         return image;
     }
 
-    //显示图片
-    function showImg() {
-        var img = convertCanvasToImage(context1);
-        console.log("头像：" + img);
-        //给img元素添加名称
-        img.name = 'file';
-        img.id = 'header';
-        $('#img').append(img);
-
-        //隐藏拍照按钮
-        $('#getPhoto').hide();
-
-        //显示验证按钮
-        $('#validateUser').show();
-
-        //关闭监控
-        $('#video').hide();
-        // mediaStreamTrack && mediaStreamTrack.stop();
-
-        //base64图片的src地址
-        var href = $('#header').attr('src');
-        // console.log('base64:' + href);
-
-    }
-
     //将照片以base64的方式传入到后台
     var x1 = 0
     var y1 = 0
     var x2 = 0
     var y2 = 0
-    var i = 0
+
 
     //拍照
     function getPhoto() {
@@ -191,6 +166,8 @@
         $('#goBack').show();
         $('#goHome').show();
 
+        $('#validateUser').hide();
+        $('#startVideo').hide();
 
         $("#canvas1").show();
         var timer = setInterval(function () {
@@ -208,34 +185,25 @@
     function validateUser(tt) {
 
         console.log('上传头像');
-        layer.load();
         var img = convertCanvasToImage(tt);
         get_face_res = $.ajax({
 
-            url: 'http://127.0.0.1:9001/face_detect_by_dlib',
+            url: 'http://127.0.0.1:9001/face_detect',
             type: "post",
             data: {'base64Data': img.src},
             dataType: "json",
             success: function (res) {
                 console.log("result:" + res.data)
-                layer.closeAll('loading');
                 if (res.code == 200) {
-                    // layer.msg("识别成功");
-                    $('#validateUser').hide();
-                    $('#startVideo').hide();
 
-                    if (i > 0) {
-                        tt.clearRect(x1, y1, x2, y2);
-                    }
-
-                    i++;
                     x1 = res.data[0];
                     y1 = res.data[1];
                     x2 = res.data[2] - res.data[0];
                     y2 = res.data[3] - res.data[1];
 
                 } else {
-                    layer.msg("识别失败，请重新检测")
+                    layer.msg("识别失败，检测不到人脸");
+                    tt.clearRect(x1, y1, x2, y2);
                     $('#validateUser').hide();
                     $('#startVideo').hide();
                 }
@@ -243,7 +211,6 @@
             error: function () {
                 layer.msg("上传失败");
             }
-
         });
 
         // 此处执行人脸矩形框绘制过程
@@ -254,7 +221,6 @@
             tt.drawImage(img, 0, 0);
             tt.strokeRect(x1, y1, x2, y2);
         });
-
     }
 
     //跳到主界面

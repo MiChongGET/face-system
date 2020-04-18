@@ -78,5 +78,15 @@ def inference():
     return make_response(jsonify({"data": [x1, y1, x2, y2], "code": 200}))
 
 
+@app.route('/face_register', methods=['POST'])
+def face_register():
+    # 获取用户姓名
+    user_name = str(request.form['name'])
+    print("用户姓名：" + user_name)
+
+    mess = make_response(jsonify({"data": user_name, "code": 200, "type": True}))
+    return mess
+
+
 if __name__ == '__main__':
     app.run(host="127.0.0.1", port=9001, debug=True)
