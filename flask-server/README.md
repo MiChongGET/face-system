@@ -7,3 +7,5 @@
 
 #### face_recognition_model.pb 亚洲人脸模型
 > 链接: https://pan.baidu.com/s/19e6F068yIc_Vdr7TPv0VeA 提取码: 8xm9
+
+#### shape_predictor_68_face_landmarks.dat 人脸关键点检测模型(dlib中使用)

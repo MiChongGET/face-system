@@ -23,8 +23,10 @@ CORS(app, supports_credentials=True)
 PATH_TO_FROZEN_GRAPH = "frozen_inference_graph.pb"
 PATH_TO_LABELS = "object_detection\\face_label_map.pbtxt"
 IMAGE_SIZE = (256, 256)
-detection_sess = tf.Session()
 
+###################
+# 人脸检测准备
+detection_sess = tf.Session()
 with detection_sess.as_default():
     od_graph_def = tf.GraphDef()
     with tf.gfile.GFile(PATH_TO_FROZEN_GRAPH, 'rb') as fid:
@@ -60,7 +62,7 @@ with detection_sess.as_default():
         image_tensor = tf.get_default_graph().get_tensor_by_name('image_tensor:0')
 
 #############################
-# 人脸特征 face feature
+# 人脸特征准备 face feature
 face_feature_sess = tf.Session()
 ff_pb_path = "face_recognition_model.pb"
 with face_feature_sess.as_default():
@@ -72,6 +74,18 @@ with face_feature_sess.as_default():
         ff_images_placeholder = tf.get_default_graph().get_tensor_by_name("input:0")
         ff_train_placeholder = tf.get_default_graph().get_tensor_by_name("phase_train:0")
         ff_embeddings = tf.get_default_graph().get_tensor_by_name("embeddings:0")
+
+#############################
+# 人脸关键点检测准备
+face_landmark_sess = tf.Session()
+ff_pb_path = "landmark.pb"
+with face_landmark_sess.as_default():
+    ff_od_graph_def = tf.GraphDef()
+    with tf.gfile.GFile(ff_pb_path, 'rb') as fid:
+        serialized_graph = fid.read()
+        ff_od_graph_def.ParseFromString(serialized_graph)
+        tf.import_graph_def(ff_od_graph_def, name='')
+        landmark_tensor = tf.get_default_graph().get_tensor_by_name("fully_connected_1/Relu:0")
 
 
 @app.route("/")
@@ -422,6 +436,121 @@ def face_dis():
     dist = np.linalg.norm(emb1 - emb2)
 
     return str(dist)
+
+
+# 人脸关键点检测
+@app.route('/face_landmark', methods=['POST'])
+def face_landmark():
+    ## 获取摄像头捕获的头像
+    # 获取前端的base64图像字符串（摄像头拍摄的图片）
+    img_str = str(request.form['base64Data'])
+
+    # 获取到base64数据
+    data = img_str.split("base64,")
+    img_data = data[1]
+
+    # 转换base64数据
+    img = base64.b64decode(img_data)
+
+    # 转化为cv需要的格式
+    ima_data_cv = np.fromstring(img, np.uint8)
+    im_data = cv2.imdecode(ima_data_cv, cv2.IMREAD_COLOR)
+
+    # 将摄像机拍摄的图片写入到本地
+    img_path = "face/img/landmark.png"
+
+    # 记录上传的图片大小
+    sp = im_data.shape
+    # 重新设置图片大小为256*256
+    im_data = cv2.resize(im_data, IMAGE_SIZE)
+    output_dict = detection_sess.run(tensor_dict,
+                                     feed_dict={image_tensor:
+                                         np.expand_dims(
+                                             im_data, 0)})
+
+    # all outputs are float32 numpy arrays, so convert types as appropriate
+    output_dict['num_detections'] = int(output_dict['num_detections'][0])
+    output_dict['detection_classes'] = output_dict[
+        'detection_classes'][0].astype(np.uint8)
+    output_dict['detection_boxes'] = output_dict['detection_boxes'][0]
+    output_dict['detection_scores'] = output_dict['detection_scores'][0]
+
+    x1 = 0
+    y1 = 0
+    x2 = 0
+    y2 = 0
+
+    # 获取人脸框，然后提取人脸
+    for i in range(len(output_dict['detection_scores'])):
+        if output_dict['detection_scores'][i] > 0.1:
+            bbox = output_dict['detection_boxes'][i]
+            y1 = bbox[0]
+            x1 = bbox[1]
+            y2 = (bbox[2])
+            x2 = (bbox[3])
+            print(output_dict['detection_scores'][i], x1, y1, x2, y2)
+            ## 提取人脸区域
+            y1 = int((y1 + (y2 - y1) * 0.2) * sp[0])
+            x1 = int(x1 * sp[1])
+            y2 = int(y2 * sp[0])
+            x2 = int(x2 * sp[1])
+            face_data = im_data[y1:y2, x1:x2]
+            cv2.imwrite(img_path, face_data)
+
+            face_data = cv2.resize(face_data, (128, 128))
+            pred = face_landmark_sess.run(landmark_tensor, {"Placeholder:0":
+                                                                np.expand_dims(face_data, 0)})
+
+            print(pred[0].shape)
+            pred = pred[0]
+            res = []
+            for i in range(0, 136, 2):
+                res.append(str((pred[i] * (x2 - x1) + x1) / sp[1]))
+                res.append(str((pred[i + 1] * (y2 - y1) + y1) / sp[0]))
+
+            res = ",".join(res)
+            return make_response(jsonify({"data": res, "code": 200, "type": True}))
+    return make_response(jsonify({"data": None, "code": 200, "type": False}))
+
+
+# 人脸关键点检测
+@app.route('/face_landmark_by_dlib', methods=['POST'])
+def face_landmark_by_dlib():
+    ## 获取摄像头捕获的头像
+    # 获取前端的base64图像字符串（摄像头拍摄的图片）
+    img_str = str(request.form['base64Data'])
+
+    # 获取到base64数据
+    data = img_str.split("base64,")
+    img_data = data[1]
+
+    # 转换base64数据
+    img = base64.b64decode(img_data)
+
+    # 转化为cv需要的格式
+    ima_data_cv = np.fromstring(img, np.uint8)
+    im_data = cv2.imdecode(ima_data_cv, cv2.IMREAD_COLOR)
+
+    # 引入dlib
+    detector = dlib.get_frontal_face_detector()
+    # 人脸检测
+    dets = detector(im_data)
+    if dets.__len__() ==0:
+        make_response(jsonify({"data": None, "code": 200, "type": False}))
+
+    predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
+
+    # 关键点集合
+    landmarks = []
+    shape = predictor(im_data, dets[0])  # 寻找人脸的68个标定点
+
+    # 遍历当前人脸所有的关键点，并且放到list中
+    for pt in shape.parts():
+        pt_pos = (pt.x, pt.y)
+        landmarks.append(pt_pos)
+
+    return make_response(jsonify({"data": landmarks, "code": 200, "type": True}))
+
 
 
 if __name__ == '__main__':
