@@ -16,7 +16,11 @@
 
         <fieldset class="layui-elem-field site-demo-button" style="margin-top: 30px;width: 400px;">
             <legend>摄像头区域</legend>
+
             <ul style="margin: 20px">
+                <h2>状态：<span class="layui-badge "
+                         style="display:inline-block;height:30px;font-weight:bold;font-size: 25px"
+                         id="face_state"></span></h2>
                 <li style="padding: 20px">
                     <video height="480px" autoplay="autoplay" width="640px" style="border: red solid 1px" title="摄像头区域"
                            id="video">
@@ -169,7 +173,7 @@
             validateUser(context1);
             context1.closePath();
             context1.fill();
-        }, 400);
+        }, 100);
 
     }
 
@@ -188,7 +192,7 @@
             success: function (res) {
                 if (res.type) {
 
-                   var i = 0;
+                    var i = 0;
                     data = res.data;
                     tt.drawImage(img, 0, 0);
                     for (i; i < data.length; i++) {
@@ -197,6 +201,9 @@
                         tt.arc(data[i][0], data[i][1], 2, 0, 2 * Math.PI);
                         tt.stroke();
                     }
+
+                    // 设置显示状态
+                    $("#face_state").text(res.face_state);
 
                 } else {
                     layer.msg("识别失败，检测不到人脸");

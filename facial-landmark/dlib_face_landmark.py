@@ -32,8 +32,8 @@ for face in dets:
 
         # if count == 38 or count == 44:
         cv2.circle(img, pt_pos, 2, (0, 255, 0), 1)
-        # font = cv2.FONT_HERSHEY_SIMPLEX
-        # cv2.putText(img, str(count), pt_pos, font, 0.3, (255, 255, 255), 1, 1)
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        cv2.putText(img, str(count), pt_pos, font, 0.4, (255, 255, 255), 1, 1)
 
     cv2.imshow("image", img)
     cv2.waitKey(0)

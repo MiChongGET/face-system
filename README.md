@@ -4,6 +4,18 @@
 ### 日常记录
 #### 一、目录详情
 
+```
+cifar10                 cifar10图像分类任务
+cocoapi-master          目标检测
+data_manager            cifar10相关数据读取和打包
+dlib                    dlib相关的介绍和一些示例代码
+face-net                深度学习模型-FaceNet介绍和源代码
+face-web                项目前端代码
+facial-landmark         人脸关键点相关的代码
+flask-server            项目后端代码
+widerface               处理widerface数据集转VOC
+```
+
 
 #### 二、准备
 
