@@ -6,6 +6,7 @@ import base64
 from flask_cors import *
 import dlib
 import glob
+from keras.models import load_model
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -611,7 +612,56 @@ def face_landmark_by_dlib():
 
     return make_response(jsonify({"data": landmarks, "face_state": face_state, "code": 200, "type": True}))
 
+# 人脸属性检测
+@app.route('/face_attribute', methods=['POST'])
+def face_attribute():
+    ## 获取摄像头捕获的头像
+    # 获取前端的base64图像字符串（摄像头拍摄的图片）
+    img_str = str(request.form['base64Data'])
 
+    # 获取到base64数据
+    data = img_str.split("base64,")
+    img_data = data[1]
+
+    # 转换base64数据
+    img = base64.b64decode(img_data)
+
+    # 转化为cv需要的格式
+    ima_data_cv = np.fromstring(img, np.uint8)
+    im_data = cv2.imdecode(ima_data_cv, cv2.IMREAD_COLOR)
+
+    face_classifier = cv2.CascadeClassifier(
+        "data\\model\\haarcascade_frontalface_default.xml"
+    )
+    gray = cv2.cvtColor(im_data, cv2.COLOR_BGR2GRAY)
+    faces = face_classifier.detectMultiScale(
+        gray, scaleFactor=1.2, minNeighbors=3, minSize=(140, 140))
+
+    gender_classifier = load_model(
+        "D:\\Python\\Work\\face-system\\flask-server\\data\\model\\simple_CNN.81-0.96.hdf5")
+    gender_labels = {0: '女', 1: '男'}
+    color = (255, 255, 255)
+
+    if faces.__len__() == 0:
+        return make_response(jsonify({"data": None, "code": 200, "type": False}))
+
+    face = faces[0]
+    x = face[0]
+    y = face[1]
+    w = face[2]
+    h = face[3]
+
+    face = im_data[(y - 60):(y + h + 60), (x - 30):(x + w + 30)]
+    face = cv2.resize(face, (48, 48))
+    face = np.expand_dims(face, 0)
+    face = face / 255.0
+    gender_label_arg = np.argmax(gender_classifier.predict(face))
+    gender = gender_labels[gender_label_arg]
+    # img = ChineseText.cv2ImgAddText(img, gender, x + h, y, color, 30)
+    print(gender)
+
+    return make_response(
+        jsonify({"data": [int(x), int(y), int(w), int(h)], "gender": gender + "", "code": 200, "type": True}))
 
 if __name__ == '__main__':
     app.run(host="127.0.0.1", port=9001, debug=True)

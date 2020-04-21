@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8"/>
+    <title>人脸属性</title>
+    <link href="layui/css/layui.css" rel="stylesheet"/>
+</head>
+<body>
+
+<div align="center">
+
+    <h1 style="margin-top: 50px">人脸属性</h1>
+    <!--<input type="button" title="开启摄像头" value="开启摄像头" onclick="getMedia();" />-->
+
+    <div align="center">
+
+        <fieldset class="layui-elem-field site-demo-button" style="margin-top: 30px;width: 400px;">
+            <legend>摄像头区域</legend>
+            <ul style="margin: 20px">
+                <h2>性别：<span class="layui-badge "
+                             style="display:inline-block;height:30px;font-weight:bold;font-size: 25px"
+                             id="gender"></span></h2>
+                <li style="padding: 20px">
+                    <video height="240px" autoplay="autoplay" style="border: red solid 1px" title="摄像头区域"
+                           id="video"></video>
+                    <div id="img">
+                        <canvas id="face-detect" hidden="hidden" height="240px" width="320px"></canvas>
+                    </div>
+                    <div>
+
+                    </div>
+                </li>
+
+                <li>
+                    <button class="layui-btn layui-btn-lg layui-btn-normal" onclick="getMedia()" style="width: 150px"
+                            id="startVideo">
+                        开启摄像头
+                    </button>
+                    <button class="layui-btn layui-btn-lg layui-btn-normal" onclick="getPhoto()"
+                            style="width: 150px;display: none"
+                            id="getPhoto">拍照
+                    </button>
+                    <button class="layui-btn layui-btn-lg layui-btn-normal" onclick="validateUser()"
+                            style="width: 150px;display: none" id="validateUser">
+                        开始验证
+                    </button>
+                    <!--<input type="file" name="file" id="upload_header" />-->
+                    <button class="layui-btn layui-btn-lg layui-btn-normal" onclick="goHome()"
+                            style="width: 150px;display: none" id="goHome">
+                        返回到主页面
+                    </button>
+                    <button class="layui-btn layui-btn-lg layui-btn-normal" onclick="goBack()"
+                            style="width: 150px;display: none" id="goBack">
+                        重新检测
+                    </button>
+                </li>
+
+                <li>
+                    <canvas id="canvas1" height="240px" width="320px" hidden="hidden"></canvas>
+                </li>
+
+            </ul>
+
+        </fieldset>
+
+    </div>
+
+
+</div>
+
+<script src="http://apps.bdimg.com/libs/jquery/2.1.4/jquery.js"></script>
+<script src="layui/lay/modules/layer.js" charset="utf-8"></script>
+
+<script type="text/javascript">
+
+    var video = document.querySelector('video');
+    var canvas1 = document.getElementById('canvas1');
+    var context1 = canvas1.getContext('2d');
+
+
+    navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+    window.URL = window.URL || window.webkitURL || window.mozURL || window.msURL;
+
+    var exArray = []; //存储设备源ID
+    MediaStreamTrack.getSources(function (sourceInfos) {
+        for (var i = 0; i != sourceInfos.length; ++i) {
+            var sourceInfo = sourceInfos[i];
+            //这里会遍历audio,video，所以要加以区分
+            if (sourceInfo.kind === 'video') {
+                exArray.push(sourceInfo.id);
+            }
+        }
+    });
+
+    function getMedia() {
+        if (navigator.getUserMedia) {
+            navigator.getUserMedia({
+                'video': {
+                    'optional': [{
+                        'sourceId': exArray[0] //0为前置摄像头，1为后置
+                    }]
+                },
+                'audio': false
+            }, successFunc, errorFunc);    //success是获取成功的回调函数
+        } else {
+            alert('Native device media streaming (getUserMedia) not supported in this browser.');
+        }
+    }
+
+    var mediaStreamTrack = null;
+
+    function successFunc(stream) {
+
+        mediaStreamTrack = typeof stream.stop === 'function' ? stream : stream.getTracks()[1];
+
+        //alert('Succeed to get media!');
+        if (video.mozSrcObject !== undefined) {
+            //Firefox中，video.mozSrcObject最初为null，而不是未定义的，我们可以靠这个来检测Firefox的支持
+            video.mozSrcObject = stream;
+        } else {
+            video.srcObject = stream;
+            // video.src = window.URL && window.URL.createObjectURL(stream) || stream;
+        }
+
+        $('#getPhoto').show();
+
+    }
+
+
+    function errorFunc(e) {
+        alert('Error！' + e);
+    }
+
+
+    // 将canvas转换为图片
+    function convertCanvasToImage(canvas) {
+        var image = new Image();
+        image.src = canvas.canvas.toDataURL("image/png");
+        return image;
+    }
+
+    //显示图片
+    function showImg() {
+        var img = convertCanvasToImage(context1);
+        console.log("头像：" + img);
+        //给img元素添加名称
+        img.name = 'file';
+        img.id = 'header';
+        $('#img').append(img);
+
+        //隐藏拍照按钮
+        $('#getPhoto').hide();
+
+        //显示验证按钮
+        $('#validateUser').show();
+
+        //关闭监控
+        $('#video').hide();
+        // mediaStreamTrack && mediaStreamTrack.stop();
+
+        //base64图片的src地址
+        var href = $('#header').attr('src');
+        // console.log('base64:' + href);
+
+    }
+
+    //拍照
+    function getPhoto() {
+        context1.drawImage(video, 0, 0, 320, 240); //将video对象内指定的区域捕捉绘制到画布上指定的区域，实现拍照。
+        showImg();
+        console.log($('#upload_header'))
+
+    }
+
+    //将照片以base64的方式传入到后台
+    function validateUser() {
+
+        console.log('上传头像');
+        layer.load();
+        $.ajax({
+
+            url: 'http://127.0.0.1:9001/face_attribute',
+            type: "post",
+            data: {'base64Data': $('#header').attr('src')},
+            dataType: "json",
+            success: function (res) {
+                console.log("result:" + res.data)
+                layer.closeAll('loading');
+                if (res.type) {
+                    layer.msg("识别成功");
+                    $('#validateUser').hide();
+                    $('#startVideo').hide();
+                    $('#goBack').show();
+                    $('#goHome').show();
+
+                    // 绘制人脸区域矩形框
+                    var c = document.getElementById("face-detect");
+                    var tt = c.getContext("2d");//
+                    var img = new Image();
+                    img.src = $('#header').attr('src');
+
+                    img.onload = function () {
+                        tt.strokeStyle = "#f00";
+                        tt.lineWidth = 2
+                        tt.drawImage(img, 0, 0);
+                        //strokeRect( x, y, width, height )  绘制矩形（无填充）
+                        tt.strokeRect(res.data[0], res.data[1], res.data[2], res.data[3]);
+                    }
+
+                    // 设置显示状态
+                    $("#gender").text(res.gender);
+
+                    // 显示canvas绘制后的图片
+                    $('#header').hide();
+                    $('#face-detect').show();
+
+                } else {
+                    layer.msg("识别失败，请重新检测")
+                    $('#validateUser').hide();
+                    $('#startVideo').hide();
+                    $('#goHome').show();
+                    $('#goBack').show();
+                }
+            },
+            error: function () {
+                layer.msg("上传失败");
+            }
+
+        });
+
+    }
+
+    //跳到主界面
+    function goHome() {
+        window.location.href = "index.html";
+    }
+
+    //跳转到检测页面
+    function goBack() {
+        window.location.href = "face_attribute.html";
+    }
+
+</script>
+</body>
+</html>

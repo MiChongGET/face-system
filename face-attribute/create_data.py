@@ -2,6 +2,9 @@ import cv2
 import tensorflow as tf
 import dlib
 
+##################
+# 本程序代码将CelebA图片裁剪之后打包成tfrecords文件
+
 anno_file = "H:\\DataSet\\CelebA\\Anno\\list_attr_celeba.txt"
 ff = open(anno_file)
 anno_info = ff.readlines()
